@@ -1,6 +1,3 @@
-Sure, here's your set of instructions converted into a Markdown (.md) file:
-
-```markdown
 # Installation and Configuration Guide
 
 ## Installing Kubectl
@@ -189,4 +186,3 @@ Perform testing as required.
 ```
 ```
 
-Make sure to replace placeholders such as `your_bucket_name_here` with actual values as necessary. Let me know if you need further assistance!
