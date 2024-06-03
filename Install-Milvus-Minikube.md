@@ -137,6 +137,4 @@ Run the following command to uninstall Milvus:
 ```sh
 helm uninstall my-release
 ```
-```
 
-Save this content to a file named `install_instructions.md`. This Markdown file includes all the steps for installing Docker, Minikube, Kubectl, and Helm, as well as deploying and managing a Milvus cluster.
