@@ -1,192 +1,288 @@
-Sure, here's your set of instructions converted into a Markdown (.md) file:
-
-```markdown
-# Installation and Configuration Guide
-
-## Installing Kubectl
+Installing Kubectl
 
 1. Run the following command to download kubectl:
 
-    ```bash
-    curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
-    ```
+curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
 
-2. Give it executable permission:
+2. Give it executive permission:
 
-    ```bash
-    chmod +x kubectl
-    ```
+chmod +x kubectl
 
 3. Move it to the same directory where you previously stored Minikube:
 
-    ```bash
-    sudo mv kubectl  /usr/local/bin/
-    ```
+sudo mv kubectl  /usr/local/bin/
 
 4. Verify the installation by running:
 
-    ```bash
-    kubectl version --client -o json
-    ```
+kubectl version --client -o json
 
-## Install eksctl
-
-1. Run the following command to download eksctl:
-
-    ```bash
-    # for ARM systems, set ARCH to: `arm64`, `armv6` or `armv7`
-    ARCH=amd64
-    PLATFORM=$(uname -s)_$ARCH
-    curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
-    ```
+Install eksctl
+1. Run the following command to download kubectl:
+# for ARM systems, set ARCH to: `arm64`, `armv6` or `armv7`
+ARCH=amd64
+PLATFORM=$(uname -s)_$ARCH
+curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
 
 2. Move the files:
+tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
+sudo mv /tmp/eksctl /usr/local/bin
 
-    ```bash
-    tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
-    sudo mv /tmp/eksctl /usr/local/bin
-    ```
-
-## Install Helm
-
+Install Helm
 1. Run the following command to download helm:
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+2. Give it executive permission:
+chmod 700 get_helm.sh
+3. move and added to path
+./get_helm.sh
+4.  Verify the installation by running:
+helm version
 
-    ```bash
-    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-    ```
-
-2. Give it executable permission:
-
-    ```bash
-    chmod 700 get_helm.sh
-    ```
-
-3. Move and add it to the path:
-
-    ```bash
-    ./get_helm.sh
-    ```
-
-4. Verify the installation by running:
-
-    ```bash
-    helm version
-    ```
-
-## Installing AWS CLI
-
+Installing AWS CLI
 1. Download the AWS CLI installer:
-
-    ```bash
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    ```
-
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 2. Unzip the installer:
-
-    ```bash
-    unzip awscliv2.zip
-    ```
-
+unzip awscliv2.zip
 3. Run the installer:
-
-    ```bash
-    sudo ./aws/install
-    ```
-
+sudo ./aws/install
 4. Verify the installation:
+aws --version
 
-    ```bash
-    aws --version
-    ```
+Configure AWS keys etc
+1. aws configure
 
-## Configure AWS keys etc
-
-1. Configure AWS:
-
-    ```bash
-    aws configure
-    ```
-
-## Create an Amazon S3 Bucket
-
+# Create an Amazon S3 Bucket
+# Read Bucket Naming Rules and observe the naming rules when naming your AWS S3 bucket.
 1. Create an Amazon S3 Bucket:
-
-    ```bash
-    milvus_bucket_name="milvus-bucket-$(openssl rand -hex 12)"
-    aws s3api create-bucket --bucket "$milvus_bucket_name" --region 'us-east-2' --acl private  --obje
-    ```
-
-2. Create an IAM policy for reading and writing objects within the bucket created above. Replace the bucket name with your own.
-
-    ```bash
-    cat <<EOF > milvus-s3-policy.json
+milvus_bucket_name="milvus-bucket-$(openssl rand -hex 12)"
+aws s3api create-bucket --bucket "$milvus_bucket_name" --region 'us-east-2' --acl private  --obje
+2. Creat an IAM policy for reading and writing objects within the bucket created above. Do replace the bucket name with your own.
+cat <<EOF > milvus-s3-policy.json
+{
+  "Version": "2012-10-17",
+  "Statement": [
     {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Action": [
-            "s3:GetObject",
-            "s3:PutObject",
-            "s3:ListBucket",
-            "s3:DeleteObject"
-          ],
-          "Resource": [
-            "arn:aws:s3:::$milvus_bucket_name",
-            "arn:aws:s3:::$milvus_bucket_name/*"
-          ]
-        }
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:ListBucket",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::$milvus_bucket_name",
+        "arn:aws:s3:::$milvus_bucket_name/*"
       ]
     }
-    EOF
+  ]
+}
+EOF
 
-    aws iam create-policy --policy-name MilvusS3ReadWrite --policy-document file://milvus-s3-policy.json
-    ```
+aws iam create-policy --policy-name MilvusS3ReadWrite --policy-document file://milvus-s3-policy.json
 
-## Create an Amazon EKS Cluster
+# Create an Amazon EKS Cluster
+cat <<EOF > eks_cluster.yaml
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
 
-1. Create a YAML file `eks_cluster.yaml` with the following content:
+metadata:
+  name: 'milvus-eks-cluster'
+  region: 'us-east-2'
+  version: "1.27"
 
-    ```yaml
-    apiVersion: eksctl.io/v1alpha5
-    kind: ClusterConfig
+iam:
+  withOIDC: true
 
-    metadata:
-      name: 'milvus-eks-cluster'
-      region: 'us-east-2'
-      version: "1.27"
+  serviceAccounts:
+    - metadata:
+        name: aws-load-balancer-controller
+        namespace: kube-system
+      wellKnownPolicies:
+        awsLoadBalancerController: true
+    - metadata:
+        name: milvus-s3-access-sa
+        namespace: milvus
+        labels: {aws-usage: "milvus"}
+      attachPolicyARNs:
+        - "MilvusS3ReadWrite_Policy_ARN"
 
-    # Configuration continues...
-    ```
+managedNodeGroups:
+  - name: milvus-node-group
+    labels: { role: milvus }
+    instanceType: m6i.4xlarge
+    desiredCapacity: 3
+    privateNetworking: true
+    
+addons:
+  - name: vpc-cni
+    version: latest
+    attachPolicyARNs:
+      - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+  - name: coredns
+    version: latest
+  - name: kube-proxy
+    version: latest
+  - name: aws-ebs-csi-driver
+    version: latest
+    wellKnownPolicies:
+      ebsCSIController: true
+EOF
 
-    (Configuration continues...)
+# Run the following command to create an EKS cluster.
+eksctl create cluster -f eks_cluster.yaml
 
-## Cleanup Works
+# Get the kubeconfig file.
+aws eks update-kubeconfig --region 'us-east-2' --name 'milvus-eks-cluster'
 
-1. Uninstall Milvus:
+#Verify the EKS cluster.
+kubectl cluster-info
+kubectl get nodes -A -o wide
 
-    ```bash
-    helm uninstall milvus-demo -n milvus
-    ```
+# Create a StorageClass
+# Milvus uses etcd as meta storage and needs to rely on the gp3 StorageClass to create and manage PVC.
 
-2. Destroy the EKS cluster:
+cat <<EOF | kubectl apply -f -
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ebs-gp3-sc
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  type: gp3
+EOF
 
-    ```bash
-    eksctl delete cluster --name milvus-eks-cluster
-    ```
+# Set the original gp2 StorageClass to non-default.
+kubectl patch storageclass gp2 -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 
-3. Delete the AWS S3 bucket and related IAM policies:
+# Add Helm chars repo.
+helm repo add eks https://aws.github.io/eks-charts
+helm repo update
 
-    ```bash
-    aws s3api delete-bucket --bucket milvus-bucket-039dd013c0712f085d60e21f --region us-east-2
+# Install the AWS Load Balancer Controller.
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName='milvus-eks-cluster' \
+  --set serviceAccount.create=false \
+  --set serviceAccount.name=aws-load-balancer-controller 
 
-    aws iam delete-policy --policy-arn 'arn:aws:iam::12345678901:policy/MilvusS3ReadWrite'
-    ```
+#Verify the installation
+kubectl get deployment -n kube-system aws-load-balancer-controller
 
-## Testing
+# Prepare the Milvus configuration file 
+milvus_bucket_name="your_bucket_name_here"  # Replace with your actual bucket name
 
-Perform testing as required.
-```
-```
+# To access your Milvus from the Internet, change service.beta.kubernetes.io/aws-load-balancer-scheme from internal to internet-facing
 
-Make sure to replace placeholders such as `your_bucket_name_here` with actual values as necessary. Let me know if you need further assistance!
+cat <<EOF > milvus-config.yaml
+cluster:
+  enabled: true
+
+service:
+  type: LoadBalancer
+  port: 19530
+  annotations: 
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+    service.beta.kubernetes.io/aws-load-balancer-name: milvus-service
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+
+serviceAccount:
+  create: false
+  name: milvus-s3-access-sa
+
+minio:
+  enabled: false
+
+externalS3:
+  enabled: true
+  host: "s3.us-east-2.amazonaws.com"
+  port: "443"
+  useSSL: true
+  bucketName: "$milvus_bucket_name"
+  useIAM: true
+  cloudProvider: "aws"
+  iamEndpoint: ""
+
+rootCoordinator:
+  replicas: 2
+  activeStandby:
+    enabled: true
+  resources: 
+    limits:
+      cpu: 1
+      memory: 2Gi
+
+indexCoordinator:
+  replicas: 2
+  activeStandby:
+    enabled: true
+  resources: 
+    limits:
+      cpu: "0.5"
+      memory: 0.5Gi
+
+queryCoordinator:
+  replicas: 2
+  activeStandby:
+    enabled: true
+  resources: 
+    limits:
+      cpu: "0.5"
+      memory: 0.5Gi
+
+dataCoordinator:
+  replicas: 2
+  activeStandby:
+    enabled: true
+  resources: 
+    limits:
+      cpu: "0.5"
+      memory: 0.5Gi
+
+proxy:
+  replicas: 2
+  resources: 
+    limits:
+      cpu: 1
+      memory: 2Gi  
+EOF
+
+# Install Milvus.
+helm install milvus-demo milvus/milvus -n milvus -f milvus.yaml
+# Wait until all pods are Running.
+kubectl get pods -n milvus
+# Get Milvus service address.
+kubectl get svc -n milvus
+# Verify the installation
+# Download the example code.
+
+wget https://raw.githubusercontent.com/milvus-io/pymilvus/master/examples/hello_milvus.py
+##...
+#connections.connect("default", host="milvus-service-06b515b1ce9ad10.elb.us-east-2.amazonaws.com", port="19530")
+#...
+# Run the example code.
+python3 hello_milvus.py
+
+# Clean-up works
+#In case you need to restore the environment by uninstalling Milvus, destroying the EKS cluster, and deleting the AWS S3 buckets and related IAM policies.
+
+# Uninstall Milvus.
+
+helm uninstall milvus-demo -n milvus
+
+# Destroy the EKS cluster.
+
+eksctl delete cluster --name milvus-eks-cluster
+
+# Delete the AWS S3 bucket and related IAM policies.
+
+# You should replace the bucket name and policy ARN with your own.
+
+aws s3api delete-bucket --bucket milvus-bucket-039dd013c0712f085d60e21f --region us-east-2
+
+aws iam delete-policy --policy-arn 'arn:aws:iam::12345678901:policy/MilvusS3ReadWrite'
+
+testing
+
