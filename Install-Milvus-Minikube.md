@@ -1,6 +1,4 @@
-Here is the provided content converted into a Markdown file:
 
-```markdown
 # Installing Docker
 
 1. Install Docker:
